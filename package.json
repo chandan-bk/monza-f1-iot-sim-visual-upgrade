@@ -1,0 +1,29 @@
+{
+  "name": "f1-monza-iot-sim",
+  "version": "1.0.0",
+  "description": "Autodromo Nazionale Monza: Real-Time Formula 1 IoT Telemetry Monitoring & Race Simulator",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test-syntax.js && node test-server.js && node test_monza_simulation.js",
+    "test:race": "node test_race_flow.js",
+    "test:qa": "node test_runtime_qa_validation.js",
+    "test:browser": "node test_real_browser_runtime.js"
+  },
+  "keywords": [
+    "motorsport",
+    "formula-1",
+    "telemetry",
+    "iot",
+    "threejs",
+    "three-dimensional-simulation",
+    "engineering-analytics"
+  ],
+  "author": "Engineering Capstone Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}

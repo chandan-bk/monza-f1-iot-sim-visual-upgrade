@@ -1,0 +1,1042 @@
+/**
+ * ============================================================================
+ * F1 RACING SIMULATOR & TELEMETRY DASHBOARD - GLOBAL STYLES
+ * ============================================================================
+ */
+
+:root {
+  --bg-dark: #07090e;
+  --bg-panel: #0d121c;
+  --bg-card: #131b28;
+  --bg-card-hover: #182234;
+  --border-subtle: #1e293b;
+  --border-active: #334155;
+
+  --f1-red: #e10600;
+  --telemetry-cyan: #00e5ff;
+  --telemetry-green: #00e676;
+  --telemetry-amber: #ffab00;
+  --telemetry-purple: #d500f9;
+  --telemetry-blue: #2979ff;
+
+  --text-main: #f1f5f9;
+  --text-dim: #94a3b8;
+  --text-dark: #64748b;
+
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+/* App Screens */
+.app-screen {
+  display: none;
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.app-screen.active {
+  display: flex;
+}
+
+/* --------------------------------------------------------------------------
+   SCREEN 1: MAIN MENU
+   -------------------------------------------------------------------------- */
+#screen-menu {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, #111827 0%, #06080d 100%);
+  position: relative;
+  overflow-y: auto;
+  padding: 40px 20px;
+}
+
+.menu-container {
+  max-width: 900px;
+  width: 100%;
+  text-align: center;
+  z-index: 2;
+}
+
+.f1-badge {
+  display: inline-block;
+  background: var(--f1-red);
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: 2px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+
+.menu-title {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffffff;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.menu-subtitle {
+  font-size: 15px;
+  color: var(--telemetry-cyan);
+  font-family: var(--font-mono);
+  margin-bottom: 28px;
+}
+
+.project-meta-box {
+  background: rgba(19, 27, 40, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 30px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.menu-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.menu-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 22px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--telemetry-cyan);
+  background: var(--bg-card-hover);
+  box-shadow: 0 10px 24px rgba(0, 229, 255, 0.15);
+}
+
+.menu-card.featured {
+  border-color: rgba(225, 6, 0, 0.6);
+}
+
+.menu-card.featured:hover {
+  border-color: var(--f1-red);
+  box-shadow: 0 10px 24px rgba(225, 6, 0, 0.2);
+}
+
+.menu-card-icon {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.menu-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.menu-card-desc {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.controls-help-strip {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dark);
+  background: rgba(13, 18, 28, 0.6);
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+}
+
+.key-tag {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+/* --------------------------------------------------------------------------
+   SCREEN 2: ACTIVE RACE & SPLIT-VIEW CONTROLLER
+   -------------------------------------------------------------------------- */
+#screen-race {
+  flex-direction: column;
+}
+
+.sim-nav-header {
+  height: 44px;
+  background: #090d14;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 10;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-tag {
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.nav-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nav-btn:hover, .nav-btn.active {
+  background: #1e293b;
+  color: #fff;
+  border-color: var(--telemetry-cyan);
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Main Split View Container */
+.race-layout-container {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 44px);
+  position: relative;
+  overflow: hidden;
+}
+
+.view-panel {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  /* Instant resize without transition lag */
+}
+
+/* Layout Variations */
+.view-split-left {
+  width: 48%;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.view-split-right {
+  width: 52%;
+}
+
+.view-full {
+  width: 100% !important;
+  display: block !important;
+}
+
+.view-hidden {
+  display: none !important;
+  width: 0 !important;
+}
+
+/* 3D Canvas Viewport */
+#canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Cockpit HUD Overlay */
+.cockpit-hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* ==========================================================================
+   BROADCAST TIMING TOWER & COCKPIT HUD (MATCHING REFERENCE IMAGES 1 & 2)
+   ========================================================================== */
+
+/* Top-Left: F1 Broadcast Timing Tower (Image 1) */
+.f1-broadcast-tower {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(10, 14, 22, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 175px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+
+.tower-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+.tower-lap-badge {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.tower-pos-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--telemetry-cyan);
+  background: rgba(0, 229, 255, 0.15);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.tower-drivers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tower-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.tower-row.is-player {
+  background: rgba(0, 229, 255, 0.2);
+  font-weight: bold;
+}
+
+.tower-pos {
+  color: #94a3b8;
+  width: 16px;
+  font-size: 10px;
+}
+
+.tower-team-bar {
+  width: 3px;
+  height: 12px;
+  border-radius: 1px;
+}
+
+.tower-code {
+  color: #ffffff;
+  font-weight: 800;
+  width: 32px;
+}
+
+.tower-gap {
+  color: #cbd5e1;
+  font-size: 10px;
+  margin-left: auto;
+}
+
+/* Top-Center: Circular GPS Track Radar (Image 2) */
+.cockpit-radar-container {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 14, 22, 0.85);
+  border: 1.5px solid rgba(0, 229, 255, 0.4);
+  border-radius: 50%;
+  padding: 4px;
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+}
+
+.cockpit-radar-container canvas {
+  border-radius: 50%;
+  display: block;
+}
+
+.radar-label {
+  position: absolute;
+  bottom: -14px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--telemetry-cyan);
+  background: rgba(6, 9, 14, 0.9);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+}
+
+/* Top-Right: TV Broadcast Watermark & Session Meta (Image 1 & 2) */
+.tv-broadcast-meta {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.tv-badge-pill {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tv-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff0000;
+  box-shadow: 0 0 8px #ff0000;
+  animation: blinker 1s infinite;
+}
+
+.tv-brand {
+  font-weight: 900;
+  letter-spacing: 1px;
+  font-size: 11px;
+  color: #fff;
+}
+
+.tv-timing-box {
+  background: rgba(10, 14, 22, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  min-width: 140px;
+  backdrop-filter: blur(6px);
+}
+
+.tv-time-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.tv-label { color: #64748b; font-weight: bold; }
+.tv-val { color: #ffffff; font-weight: bold; }
+
+.hud-cam-btn {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.hud-cam-btn:hover {
+  background: var(--telemetry-cyan);
+  color: #000;
+}
+
+/* Bottom Corners: On-Screen Brake & Throttle Pedals (Image 2) */
+.hud-pedal-container {
+  position: absolute;
+  bottom: 20px;
+  pointer-events: auto;
+  z-index: 20;
+}
+
+.pedal-left { left: 24px; }
+.pedal-right { right: 24px; }
+
+.pedal-frame {
+  width: 64px;
+  height: 90px;
+  background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+  border: 2px solid #374151;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  transition: all 0.08s ease;
+  user-select: none;
+}
+
+.pedal-ribs {
+  width: 80%;
+  height: 50px;
+  background: repeating-linear-gradient(
+    0deg,
+    #374151,
+    #374151 5px,
+    #1f2937 5px,
+    #1f2937 10px
+  );
+  border-radius: 4px;
+  border: 1px solid #4b5563;
+}
+
+.pedal-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+/* Active Pressed Pedal Highlights */
+.pedal-frame.active-brake {
+  border-color: #ff1744;
+  box-shadow: 0 0 16px rgba(255, 23, 68, 0.6);
+  transform: scale(0.96);
+  background: #371419;
+}
+
+.pedal-frame.active-throttle {
+  border-color: #00e676;
+  box-shadow: 0 0 16px rgba(0, 230, 118, 0.6);
+  transform: scale(0.96);
+  background: #0f3322;
+}
+
+/* Formula 1 Steering Wheel Digital Dashboard (Bottom Center of 3D View) */
+.hud-steering-wheel-dash {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(11, 15, 23, 0.92);
+  border: 2px solid #243044;
+  border-radius: 12px;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  transition: opacity 0.2s;
+}
+
+/* In Cockpit Camera mode, hide the 2D wheel dash because the real 3D wheel is visible! */
+.hide-2d-wheel {
+  display: none !important;
+}
+
+.rpm-led-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.rpm-led {
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  background: #1a2230;
+}
+
+.rpm-led.led-green { background: #00e676; box-shadow: 0 0 6px #00e676; }
+.rpm-led.led-red { background: #ff1744; box-shadow: 0 0 6px #ff1744; }
+.rpm-led.led-purple { background: #d500f9; box-shadow: 0 0 8px #d500f9; }
+
+.dash-main-cluster {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.cluster-gear {
+  font-size: 44px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: #ffffff;
+  line-height: 1;
+  min-width: 38px;
+  text-align: center;
+}
+
+.cluster-speed-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.cluster-speed-num {
+  font-size: 32px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--telemetry-cyan);
+  line-height: 1;
+}
+
+.cluster-unit {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-dark);
+}
+
+.cluster-delta-box {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: bold;
+}
+
+/* Countdown Starting Lights Overlay */
+#countdown-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.65);
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  backdrop-filter: blur(4px);
+}
+
+.lights-gantry-board {
+  background: #090d14;
+  border: 4px solid #233044;
+  border-radius: 12px;
+  padding: 24px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+.lights-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.light-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #220000;
+  border: 2px solid #330000;
+}
+
+.light-dot.lit-red {
+  background: #ff0000;
+  border-color: #ff5252;
+  box-shadow: 0 0 24px #ff0000;
+}
+
+.countdown-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   SCREEN 3: POST-RACE RESULTS
+   -------------------------------------------------------------------------- */
+#screen-results {
+  flex-direction: column;
+  background: #07090e;
+  overflow-y: auto;
+  padding: 30px 40px;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.results-title {
+  font-size: 28px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+@media (max-width: 1024px) {
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.results-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.data-table th {
+  text-align: left;
+  padding: 8px 10px;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--border-subtle);
+  font-weight: 600;
+}
+
+.data-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.row-player {
+  background: rgba(0, 229, 255, 0.08);
+}
+
+.pos-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+.pos-1 { background: #ffd600; color: #000; }
+.pos-2 { background: #cfd8dc; color: #000; }
+.pos-3 { background: #ff8a65; color: #000; }
+
+.status-pill {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: bold;
+  font-family: var(--font-mono);
+}
+
+.state-ready { background: #374151; color: #d1d5db; }
+.state-countdown { background: #b45309; color: #fef3c7; }
+.state-running { background: #065f46; color: #6ee7b7; }
+.state-finished { background: #1e3a8a; color: #93c5fd; }
+.state-paused { background: #831843; color: #fbcfe8; }
+
+.mode-pill {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: bold;
+}
+
+.mode-sim { background: rgba(0, 229, 255, 0.15); color: var(--telemetry-cyan); border: 1px solid var(--telemetry-cyan); }
+.mode-hardware { background: rgba(0, 230, 118, 0.15); color: var(--telemetry-green); border: 1px solid var(--telemetry-green); }
+
+.summary-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-dark);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: #fff;
+}
+
+.stat-value.highlight {
+  color: var(--telemetry-cyan);
+}
+
+.stat-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.engineer-verdict {
+  background: rgba(0, 229, 255, 0.05);
+  border-left: 3px solid var(--telemetry-cyan);
+  padding: 12px 16px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+/* Track Limits & Barrier Collision Alert Banner */
+.hud-warning-pill {
+  position: absolute;
+  top: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(225, 6, 0, 0.92);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  padding: 8px 22px;
+  border-radius: 24px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 24px rgba(225, 6, 0, 0.8), 0 8px 20px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 100;
+  animation: warningPulse 0.5s infinite alternate ease-in-out;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.hud-warning-pill.warning-barrier {
+  background: rgba(255, 140, 0, 0.95);
+  box-shadow: 0 0 30px rgba(255, 140, 0, 0.9);
+}
+
+.hud-warning-pill.hidden {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.9);
+  pointer-events: none;
+}
+
+@keyframes warningPulse {
+  0% { transform: translateX(-50%) scale(1.0); }
+  100% { transform: translateX(-50%) scale(1.04); }
+}
+
+
+/* Autonomous Race Card Featured Badge */
+.menu-card.auto-race-card {
+  border-color: rgba(0, 229, 255, 0.5);
+  background: linear-gradient(135deg, rgba(9, 13, 20, 0.95), rgba(0, 229, 255, 0.08));
+}
+
+.menu-card.auto-race-card:hover {
+  border-color: var(--telemetry-cyan);
+  box-shadow: 0 10px 28px rgba(0, 229, 255, 0.28);
+}
+
+.menu-card-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: rgba(0, 229, 255, 0.2);
+  color: var(--telemetry-cyan);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* Nav Header Auto-Drive Button */
+.mode-autodrive-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.mode-autodrive-btn.active {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: var(--telemetry-cyan);
+  color: var(--telemetry-cyan);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+/* Autonomous AI Autopilot Pill Banner */
+.hud-autopilot-pill {
+  position: absolute;
+  top: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(9, 13, 20, 0.92);
+  border: 1.5px solid var(--telemetry-cyan);
+  color: var(--telemetry-cyan);
+  padding: 7px 20px;
+  border-radius: 20px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4), 0 4px 12px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 95;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.hud-autopilot-pill.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+  pointer-events: none;
+}
+
+.autopilot-pulse {
+  width: 9px;
+  height: 9px;
+  background: var(--telemetry-cyan);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px var(--telemetry-cyan);
+  animation: autoPulse 1s infinite alternate ease-in-out;
+}
+
+@keyframes autoPulse {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  100% { transform: scale(1.3); opacity: 1; }
+}
+
+/* Broadcast Timing Tower Monitored Row */
+.tower-row.is-monitored-tower {
+  border-left: 3px solid var(--telemetry-cyan) !important;
+  background: rgba(0, 229, 255, 0.16) !important;
+}
+
+.data-table tbody tr {
+  transition: background 0.15s ease;
+}
+.data-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+.row-monitored {
+  background: rgba(0, 229, 255, 0.16) !important;
+  box-shadow: inset 3px 0 0 #00e5ff;
+}
+.live-telemetry-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.18);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 6px;
+  letter-spacing: 0.5px;
+}
