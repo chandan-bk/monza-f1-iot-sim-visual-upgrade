@@ -93,30 +93,39 @@ Every 50ms (20 times per second), the simulation serializes a comprehensive mult
 ```bash
 npm install
 npm start
+
 # Application Web Interface: http://localhost:3000
 # WebSocket Gateway:        ws://localhost:3000/telemetry-stream
 # REST Telemetry Ingest:    http://localhost:3000/api/telemetry/ingest
+# REST Control Command:     http://localhost:3000/api/control/command
+# Gateway Server Health:    http://localhost:3000/api/status
+```
+
+### Security & Authentication Configuration (Optional)
+By default, the server runs in permissive mode suitable for local educational demonstration and testing. For hardened multi-device deployments, set environment variables:
+```bash
+# Enable strict authentication enforcement
+export F1_REQUIRE_AUTH=true
+
+# Custom pre-shared credentials (defaults provided for testing)
+export F1_SIM_TOKEN="f1-sim-auth-token-2024"
+export F1_DASH_TOKEN="f1-dash-auth-token-2024"
+export F1_API_KEY="f1-rest-api-token-2024"
 ```
 
 ### Running Automated Test Suites
 ```bash
-# 1. Frontend JavaScript Syntax Validation (18 modules)
-node test-syntax.js
+# 1. Standard Integrated Test Suite (Syntax + 18 Server Checks + 200 Sim Steps)
+npm test
 
-# 2. WebSocket Telemetry Gateway & Dual-Device Role Test
-node test-server.js
+# 2. 120-Second Multi-Car Competitive Race Flow Verification (Overtakes & Gaps)
+npm run test:race
 
-# 3. Headless Vehicle Dynamics & 19-Channel Sensor Simulation Test
-node test_monza_simulation.js
+# 3. Autonomous Multi-Car & Telemetry QA Acceptance Suite (5 Acceptance Criteria)
+npm run test:qa
 
-# 4. 120-Second 6-Car Competitive Race Flow Test
-node test_race_flow.js
-
-# 5. Full Autonomous Multi-Car & Telemetry QA Acceptance Suite
-node test_runtime_qa_validation.js
-
-# 6. Real Browser (Google Chrome) E2E Runtime Verification
-node test_real_browser_runtime.js
+# 4. Real Browser (Google Chrome) Headless E2E Verification via CDP
+npm run test:browser
 ```
 
 ---

@@ -6,7 +6,7 @@
  * Uses actual Node.js HTTP Server and actual WebSocket client sockets.
  * Validates:
  *  1. Server initialization on ephemeral port
- *  2. Simulator client role registration ('SIM' -> REGISTER_ACK)
+ *  2. Simulator client role registration ('SIM' -> REGISTER_ACK) with session generation
  *  3. Dashboard client role registration ('DASHBOARD' -> REGISTER_ACK)
  *  4. Connected client count tracking on server
  *  5. Periodic PING / PONG round-trip latency measurement (true RTT)
@@ -16,25 +16,60 @@
  *  9. Sequence gap detection on server
  *  10. Remote intervention dispatch, simulator execution, and real COMMAND_ACK
  *  11. Remote fault injection dispatch, simulator execution, and real COMMAND_ACK
- *  12. Invalid command rejection (unauthorized role/session and malformed payload)
- *  13. Clean client reconnection handling
- *  14. Graceful server shutdown and cleanup
+ *  12. Invalid command rejection (unauthorized role/session, malformed payload, unsupported action, invalid car ID)
+ *  13. Malformed JSON message rejection over WebSocket
+ *  14. REST telemetry ingest: payload validation and out-of-bounds rejection
+ *  15. REST control command endpoint dispatch and simulator relay
+ *  16. Clean client reconnection handling and client cleanup
+ *  17. Strict Authentication Mode: token verification, credential rejection, REST API key protection
+ *  18. Graceful server shutdown and cleanup
  * ============================================================================
  */
 
 const assert = require('assert');
+const http = require('http');
 const WebSocket = require('ws');
 const { createServerInstance } = require('./server');
 
 const TEST_PORT = 3888;
 const WS_URL = `ws://localhost:${TEST_PORT}/telemetry-stream`;
 
+function httpPost(url, data, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const body = JSON.stringify(data);
+    const req = http.request({
+      hostname: parsed.hostname,
+      port: parsed.port,
+      path: parsed.pathname,
+      method: 'POST',
+      headers: Object.assign({
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }, headers)
+    }, (res) => {
+      let resBody = '';
+      res.on('data', chunk => resBody += chunk);
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, body: JSON.parse(resBody) });
+        } catch (e) {
+          resolve({ status: res.statusCode, raw: resBody });
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 async function runServerIntegrationTests() {
   console.log('\n================================================================');
   console.log('  STARTING FORMULA 1 IoT SERVER & DUAL-DEVICE INTEGRATION TESTS');
   console.log('================================================================\n');
 
-  // 1. Start Server Instance
+  // 1. Start Server Instance (Standard / Educational Mode)
   const serverInstance = createServerInstance();
   await new Promise((resolve) => {
     serverInstance.server.listen(TEST_PORT, () => {
@@ -55,7 +90,8 @@ async function runServerIntegrationTests() {
         simWs.send(JSON.stringify({
           type: 'REGISTER',
           role: 'SIM',
-          clientId: 'MONZA_PHYSICAL_SIM_01'
+          clientId: 'MONZA_PHYSICAL_SIM_01',
+          token: 'f1-sim-auth-token-2024'
         }));
       });
 
@@ -81,7 +117,8 @@ async function runServerIntegrationTests() {
         dashWs.send(JSON.stringify({
           type: 'REGISTER',
           role: 'DASHBOARD',
-          clientId: 'PITWALL_ENGINEER_DASH_01'
+          clientId: 'PITWALL_ENGINEER_DASH_01',
+          token: 'f1-dash-auth-token-2024'
         }));
       });
 
@@ -295,7 +332,7 @@ async function runServerIntegrationTests() {
     assert.strictEqual(ackFaultReceived.result.tyreLeak, true);
     console.log(`[PASS] Remote fault injection (TYRE_PRESSURE_LEAK for #1 VER) executed and acknowledged`);
 
-    // 10. Test Invalid Command Rejection (Unauthorized session & malformed payload)
+    // 10. Test Invalid Command Rejection (Unauthorized session & malformed payload & unsupported action)
     const rejectPromise1 = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Rejection timeout')), 2000);
       const onMsg = (data) => {
@@ -322,7 +359,95 @@ async function runServerIntegrationTests() {
     assert.strictEqual(rejection1.reason, 'UNAUTHORIZED_ROLE_OR_SESSION');
     console.log(`[PASS] Unauthorized command rejected by server: ${rejection1.reason}`);
 
-    // 11. Test Reconnection
+    // Test Unsupported Action Rejection
+    const rejectPromise2 = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Rejection timeout')), 2000);
+      const onMsg = (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'COMMAND_REJECTED') {
+          dashWs.off('message', onMsg);
+          clearTimeout(timeout);
+          resolve(msg);
+        }
+      };
+      dashWs.on('message', onMsg);
+
+      dashWs.send(JSON.stringify({
+        type: 'REMOTE_COMMAND',
+        action: 'UNSUPPORTED_RANDOM_ACTION_99',
+        command_id: 'cmd_bad_action',
+        session_id: dashRegistered.session_id
+      }));
+    });
+
+    const rejection2 = await rejectPromise2;
+    assert.strictEqual(rejection2.type, 'COMMAND_REJECTED');
+    assert.ok(rejection2.reason.includes('UNSUPPORTED_ACTION'), 'Should reject unsupported action');
+    console.log(`[PASS] Unsupported action rejected by server: ${rejection2.reason}`);
+
+    // Test Malformed JSON WebSocket Message
+    const malformedJsonPromise = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Malformed JSON timeout')), 2000);
+      const onMsg = (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'ERROR' && msg.code === 'MALFORMED_JSON') {
+          dashWs.off('message', onMsg);
+          clearTimeout(timeout);
+          resolve(msg);
+        }
+      };
+      dashWs.on('message', onMsg);
+      dashWs.send('THIS IS NOT VALID JSON {{{');
+    });
+
+    const malformedMsg = await malformedJsonPromise;
+    assert.strictEqual(malformedMsg.code, 'MALFORMED_JSON');
+    console.log(`[PASS] Malformed JSON message safely caught and rejected over WebSocket`);
+
+    // 11. Test REST Telemetry Ingest & Validation
+    const validRestRes = await httpPost(`http://localhost:${TEST_PORT}/api/telemetry/ingest`, {
+      car_id: 'LEC',
+      speed_kmh: 340.5,
+      engine_rpm: 14200,
+      engine_temp_c: 98.5
+    });
+    assert.strictEqual(validRestRes.status, 200);
+    assert.strictEqual(validRestRes.body.status, 'ACK');
+    console.log(`[PASS] REST telemetry ingest verified (Status: 200 ACK)`);
+
+    const invalidRestRes = await httpPost(`http://localhost:${TEST_PORT}/api/telemetry/ingest`, {
+      car_id: 'LEC',
+      speed_kmh: 999.0 // Impossible speed > 450 km/h
+    });
+    assert.strictEqual(invalidRestRes.status, 400);
+    assert.ok(invalidRestRes.body.error.includes('OUT_OF_BOUNDS_SPEED'), 'Should reject out-of-bounds speed');
+    console.log(`[PASS] REST payload validation verified: out-of-bounds speed rejected with 400`);
+
+    // 12. Test REST Remote Control Endpoint (/api/control/command)
+    const restCmdPromise = new Promise((resolve) => {
+      const onSimMsg = (data) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'SIM_EXECUTE_COMMAND' && msg.command_id === 'rest_cmd_01') {
+          simWs.off('message', onSimMsg);
+          resolve(msg);
+        }
+      };
+      simWs.on('message', onSimMsg);
+    });
+
+    const restCmdHttp = httpPost(`http://localhost:${TEST_PORT}/api/control/command`, {
+      action: 'LIFT_AND_COAST',
+      payload: { target_car_id: 'HAM' },
+      command_id: 'rest_cmd_01'
+    });
+
+    const [dispatchedRestCmd, restHttpRes] = await Promise.all([restCmdPromise, restCmdHttp]);
+    assert.strictEqual(restHttpRes.status, 200);
+    assert.strictEqual(restHttpRes.body.status, 'RELAYED');
+    assert.strictEqual(dispatchedRestCmd.action, 'LIFT_AND_COAST');
+    console.log(`[PASS] REST control command endpoint verified: command relayed to simulator`);
+
+    // 13. Test Reconnection & Client Cleanup
     dashWs.close();
     await new Promise(r => setTimeout(r, 200));
     assert.strictEqual(serverInstance.dashboardClients.size, 0, 'Dashboard client should be cleaned up on disconnect');
@@ -333,7 +458,8 @@ async function runServerIntegrationTests() {
         newDashWs.send(JSON.stringify({
           type: 'REGISTER',
           role: 'DASHBOARD',
-          clientId: 'RECONNECTED_DASHBOARD'
+          clientId: 'RECONNECTED_DASHBOARD',
+          token: 'f1-dash-auth-token-2024'
         }));
       });
       newDashWs.on('message', (data) => {
@@ -349,22 +475,108 @@ async function runServerIntegrationTests() {
 
     newDashWs.close();
 
-    console.log('\n================================================================');
-    console.log('  ALL INTEGRATION TESTS COMPLETED SUCCESSFULLY WITH 100% PASS');
-    console.log('================================================================\n');
-
   } finally {
-    // 12. Clean Server Shutdown
     if (simWs && simWs.readyState === WebSocket.OPEN) simWs.close();
     if (dashWs && dashWs.readyState === WebSocket.OPEN) dashWs.close();
 
     await new Promise((resolve) => {
       serverInstance.close(() => {
-        console.log('[PASS] Integration server shut down cleanly.');
+        console.log('[PASS] Standard server shut down cleanly.');
         resolve();
       });
     });
   }
+
+  // 14. Test Strict Authentication Mode (Security Verification)
+  console.log('\n--- VERIFYING STRICT AUTHENTICATION MODE ---');
+  const strictServer = createServerInstance({
+    requireAuth: true,
+    simToken: 'secret-sim-token-xyz',
+    dashToken: 'secret-dash-token-abc',
+    apiKey: 'secret-api-key-123'
+  });
+
+  await new Promise((resolve) => strictServer.server.listen(TEST_PORT + 1, resolve));
+  const STRICT_WS_URL = `ws://localhost:${TEST_PORT + 1}/telemetry-stream`;
+
+  try {
+    // A. Missing Credentials Rejected
+    const rejectNoToken = await new Promise((resolve) => {
+      const ws = new WebSocket(STRICT_WS_URL);
+      ws.on('open', () => {
+        ws.send(JSON.stringify({ type: 'REGISTER', role: 'DASHBOARD' }));
+      });
+      ws.on('message', (raw) => {
+        const msg = JSON.parse(raw.toString());
+        if (msg.type === 'REGISTER_REJECTED') {
+          ws.close();
+          resolve(msg);
+        }
+      });
+    });
+    assert.strictEqual(rejectNoToken.reason, 'MISSING_CREDENTIALS');
+    console.log(`[PASS] Strict Auth: Registration without token rejected (MISSING_CREDENTIALS)`);
+
+    // B. Invalid Credentials Rejected
+    const rejectBadToken = await new Promise((resolve) => {
+      const ws = new WebSocket(STRICT_WS_URL);
+      ws.on('open', () => {
+        ws.send(JSON.stringify({ type: 'REGISTER', role: 'DASHBOARD', token: 'WRONG_TOKEN_VALUE' }));
+      });
+      ws.on('message', (raw) => {
+        const msg = JSON.parse(raw.toString());
+        if (msg.type === 'REGISTER_REJECTED') {
+          ws.close();
+          resolve(msg);
+        }
+      });
+    });
+    assert.strictEqual(rejectBadToken.reason, 'INVALID_CREDENTIALS');
+    console.log(`[PASS] Strict Auth: Registration with incorrect token rejected (INVALID_CREDENTIALS)`);
+
+    // C. Valid Credentials Accepted
+    const acceptGoodToken = await new Promise((resolve) => {
+      const ws = new WebSocket(STRICT_WS_URL);
+      ws.on('open', () => {
+        ws.send(JSON.stringify({ type: 'REGISTER', role: 'DASHBOARD', token: 'secret-dash-token-abc' }));
+      });
+      ws.on('message', (raw) => {
+        const msg = JSON.parse(raw.toString());
+        if (msg.type === 'REGISTER_ACK') {
+          ws.close();
+          resolve(msg);
+        }
+      });
+    });
+    assert.strictEqual(acceptGoodToken.status, 'SUCCESS');
+    console.log(`[PASS] Strict Auth: Registration with valid token accepted (Session: ${acceptGoodToken.session_id})`);
+
+    // D. REST Ingest Protection (401 on missing/bad key, 200 on valid key)
+    const restUnauthorized = await httpPost(`http://localhost:${TEST_PORT + 1}/api/telemetry/ingest`, {
+      car_id: 'VER', speed_kmh: 345.0
+    });
+    assert.strictEqual(restUnauthorized.status, 401);
+    console.log(`[PASS] Strict Auth: REST ingest without API key rejected with 401 Unauthorized`);
+
+    const restAuthorized = await httpPost(`http://localhost:${TEST_PORT + 1}/api/telemetry/ingest`, {
+      car_id: 'VER', speed_kmh: 345.0
+    }, { 'x-api-key': 'secret-api-key-123' });
+    assert.strictEqual(restAuthorized.status, 200);
+    assert.strictEqual(restAuthorized.body.status, 'ACK');
+    console.log(`[PASS] Strict Auth: REST ingest with valid API key accepted with 200 ACK`);
+
+  } finally {
+    await new Promise((resolve) => {
+      strictServer.close(() => {
+        console.log('[PASS] Strict auth server shut down cleanly.');
+        resolve();
+      });
+    });
+  }
+
+  console.log('\n================================================================');
+  console.log('  ALL INTEGRATION & SECURITY TESTS COMPLETED WITH 100% PASS');
+  console.log('================================================================\n');
 }
 
 if (require.main === module) {

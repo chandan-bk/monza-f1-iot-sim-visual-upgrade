@@ -17,7 +17,7 @@
    ```text
    http://localhost:3000
    ```
-   *(Or navigate directly to the online GitHub Pages deployment: `https://chandan-bk.github.io/f1-monza-iot-sim/`)*
+   *(Or navigate directly to the online GitHub Pages deployment: `https://chandan-bk.github.io/monza-f1-iot-sim-visual-upgrade/`)*
 3. The application loads directly into **100% Fullscreen Cockpit Mode** with the official F1 TV Broadcast Timing Tower and live telemetry.
 
 ---

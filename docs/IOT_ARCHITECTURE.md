@@ -94,3 +94,36 @@ Monitored car selection on the Pitwall Dashboard is strictly a visual display pr
 - **`injectedLatencyMs`**: User-configured simulation delay representing trackside microwave telemetry propagation delays.
 - **`injectedPacketLossRate`**: User-configured dropout rate representing electromagnetic interference.
 - **`observedPacketLoss`**: Sequence gaps detected in `sequence_number` telemetry headers.
+
+---
+
+## 5. Backend Security, Role Authorization & Payload Validation
+
+In Phase 2 backend stabilization, the server gateway was hardened with production-grade security, session controls, and input validation:
+
+### 5.1 Cryptographic Session Tokens
+Client sessions are generated using Node.js `crypto.randomBytes(8).toString('hex')` rather than pseudo-random `Math.random()`, producing unguessable session tokens (e.g., `sess_1794759118631_dc34ffa0180591d6`).
+
+### 5.2 Token-Based Authentication Configuration
+Authentication credentials can be configured via environment variables or initialization options:
+- `F1_SIM_TOKEN`: Pre-shared token for physical simulation producer (`default: f1-sim-auth-token-2024`).
+- `F1_DASH_TOKEN`: Pre-shared token for pitwall dashboard monitoring & control (`default: f1-dash-auth-token-2024`).
+- `F1_API_KEY`: Pre-shared API key for REST endpoints (`default: f1-rest-api-token-2024`).
+- `F1_REQUIRE_AUTH`: Boolean flag (`true` / `false`). When enabled, unauthenticated registrations and REST calls are rejected with HTTP 401 or `REGISTER_REJECTED`. For local educational demonstrations, permissive fallback ensures zero setup friction while enforcing role boundaries.
+
+### 5.3 REST Ingestion & Command Protection
+- `POST /api/telemetry/ingest`: Validates API key in `x-api-key` or `Authorization: Bearer <token>`. Rejects malformed JSON with 400 `MALFORMED_JSON`. Rejects unknown vehicles with 400 `INVALID_CAR_ID`. Enforces physical bounds:
+  - Speed: 0 to 450 km/h
+  - Engine RPM: 0 to 22,000 RPM
+  - Engine Coolant Temp: -20°C to 250°C
+- `POST /api/control/command`: Allows authenticated external race engineering systems to inject commands via REST, routing them to the active simulator.
+
+### 5.4 Remote Command Whitelist & Vehicle Validation
+Incoming WebSocket `REMOTE_COMMAND` frames are checked against:
+1. Active registered `DASHBOARD` session.
+2. Whitelisted action names: `ALLOWED_ACTIONS` (`COOLING_MODE`, `PIT_STOP`, `LIFT_AND_COAST`, `BRAKE_BIAS`, `DAMPER_STIFFNESS`, `ENGINE_OVERHEAT`, `TYRE_PRESSURE_LEAK`, `BRAKE_OVERHEAT`, `VIBRATION`, `SENSOR_DISCONNECT`, `SENSOR_STUCK`, `SENSOR_NOISY`, `SELECT_CAR`, `RESET_FAULTS`, etc.).
+3. Target vehicle identifier whitelist: `VALID_CAR_IDS` (`['LEC', 'VER', 'HAM', 'NOR', 'ALO', 'GAS']`).
+Commands failing validation are rejected with `COMMAND_REJECTED` and explicit failure reasons.
+
+### 5.5 Stale Client Pruning (Heartbeat Watchdog)
+The server runs a 30-second interval watchdog checking client responsiveness. Dead sockets or stale clients that fail to respond to ping/telemetry are terminated and removed from client registries, preventing memory leaks and ghost relays.

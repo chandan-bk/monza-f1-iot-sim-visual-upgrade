@@ -72,17 +72,23 @@ Rather than relying on black-box heuristics, the telemetry engine evaluates tran
 
 ---
 
-## 5. Build 7 Multi-Car Engineering Integration Verification
+## 5. Build 7 & Phase 2 Backend Hardening Verification
 
-In Build 7, the platform underwent comprehensive integration testing across the vehicle dynamics core, telemetry pipeline, and WebSocket gateway:
+In Build 7 and Phase 2, the platform underwent comprehensive integration testing across the vehicle dynamics core, telemetry pipeline, and WebSocket gateway:
 1. **6-Car Independent Physics & AI Dynamics**: Verified non-convergent, distinct speeds (LEC: 347.4, VER: 347.8, HAM: 347.6, NOR: 348.7, ALO: 346.4, GAS: 345.4 km/h) and independent grid slots (P1: 140m, P6: 50m).
 2. **Concurrent 6-Stream Batch Transmission**: 20 Hz batches serialize all 6 vehicles concurrently without restricting background streaming when the dashboard user switches monitored focus.
 3. **Single-Car Failure Isolation**: Wrapped serialization ensures that a failure or anomaly in one car's sensor registry does not interrupt the transmission of the other 5 vehicles.
 4. **Dual-Role WebSocket Security**: Only authenticated SIM clients are authorized to ingest telemetry; non-SIM clients attempting to publish are rejected with `UNAUTHORIZED_PUBLISHER`.
 5. **Closed-Loop Remote Interventions & Faults**: Race engineer commands (`COOLING_MODE`, `PIT_STOP`, `TYRE_PRESSURE_LEAK`, etc.) are routed to the specific target vehicle, executed on real physics, and acknowledged with exact post-execution state.
-6. **Sequence Gap Detection & Reconnections**: The server continuously monitors sequence continuity per vehicle stream and tracks client reconnection counts.
+6. **Sequence Gap Detection & Reconnections**:
+### 5.1 Security Hardening & Input Validation
+1. **Cryptographic Tokens**: Session identifiers are generated using 16-character hex strings derived from cryptographic entropy (`crypto.randomBytes(8)`).
+2. **Whitelist-Enforced Command Interventions**: Incoming commands are validated against `ALLOWED_ACTIONS` and `VALID_CAR_IDS`. Malformed actions or illegal parameters are rejected with `COMMAND_REJECTED`.
+3. **Payload Sanitization**: Telemetry ingest validates numeric boundaries (Speed 0–450 km/h, RPM 0–22,000, Coolant -20°C to 250°C), returning HTTP 400 for malformed or out-of-range data.
+4. **Heartbeat Watchdog**: Dead client connections are automatically pruned every 30 seconds to maintain zero memory leak profile.
+ The server continuously monitors sequence continuity per vehicle stream and tracks client reconnection counts.
 
-## 5. Experimental Results & Verification
+## 6. Experimental Results & Verification
 
 | Evaluation Parameter | Target Requirement | Measured Performance | Result |
 |---|---|---|---|
@@ -95,6 +101,6 @@ In Build 7, the platform underwent comprehensive integration testing across the 
 
 ---
 
-## 6. Conclusion & Future Work
+## 7. Conclusion & Future Work
 
 The completed project successfully demonstrates the real-time application of IoT in motorsport. By coupling a physically rigorous simulation with real-time telematics ingestion and intelligent pitwall diagnostics, the platform serves as an exemplar capstone project for engineering education. Future extensions may integrate MQTT broking over LTE-M trackside relays, multi-car live telemetry telemetry overlays, and predictive tire wear modeling via Kalman filter state estimation.

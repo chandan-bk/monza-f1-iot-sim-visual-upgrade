@@ -33,6 +33,8 @@
 
       this.role = options.role || defaultRole;
       this.clientId = options.clientId || `${this.role}_${Math.random().toString(36).substr(2, 6)}`;
+      const defaultToken = (this.role === 'SIM') ? 'f1-sim-auth-token-2024' : 'f1-dash-auth-token-2024';
+      this.token = options.token || (typeof window !== 'undefined' && window.F1_CONFIG && window.F1_CONFIG.AUTH_TOKEN) || defaultToken;
       this.sessionId = null;
       this.isRegistered = false;
 
@@ -94,6 +96,7 @@
             type: 'REGISTER',
             role: this.role,
             clientId: this.clientId,
+            token: this.token,
             timestamp: Date.now()
           }));
 
