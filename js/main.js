@@ -479,7 +479,9 @@ class F1SimApp {
           this.resetPlayerCar();
           break;
         case 'KeyM':
-          this.audio.toggleMute();
+          const isMuted = this.audio.toggleMute();
+          const btnMuteEl = document.getElementById('btn-audio-mute');
+          if (btnMuteEl) btnMuteEl.textContent = isMuted ? "🔇 UNMUTE" : "🔊 AUDIO";
           break;
         case 'KeyT':
           this.cycleViewLayout();
@@ -577,8 +579,48 @@ class F1SimApp {
     if (btnMute) {
       btnMute.onclick = () => {
         const muted = this.audio.toggleMute();
-        btnMute.textContent = muted ? "🔇 UNMUTE" : "🔊 MUTE";
+        btnMute.textContent = muted ? "🔇 UNMUTE" : "🔊 AUDIO";
       };
+    }
+
+    // Interactive On-Screen Pedals (Touch, Click & Hold)
+    const pedalThrottle = document.getElementById('hud-throttle-pedal');
+    const pedalBrake = document.getElementById('hud-brake-pedal');
+
+    if (pedalThrottle) {
+      const pressThrot = (e) => {
+        e.preventDefault();
+        if (this.audio && !this.audio.isInitialized) this.audio.init();
+        this.keys.forward = true;
+        this.highlightPedal('throttle', true);
+      };
+      const releaseThrot = (e) => {
+        e.preventDefault();
+        this.keys.forward = false;
+        this.highlightPedal('throttle', false);
+      };
+      pedalThrottle.addEventListener('pointerdown', pressThrot);
+      pedalThrottle.addEventListener('pointerup', releaseThrot);
+      pedalThrottle.addEventListener('pointerleave', releaseThrot);
+      pedalThrottle.addEventListener('pointercancel', releaseThrot);
+    }
+
+    if (pedalBrake) {
+      const pressBrake = (e) => {
+        e.preventDefault();
+        if (this.audio && !this.audio.isInitialized) this.audio.init();
+        this.keys.backward = true;
+        this.highlightPedal('brake', true);
+      };
+      const releaseBrake = (e) => {
+        e.preventDefault();
+        this.keys.backward = false;
+        this.highlightPedal('brake', false);
+      };
+      pedalBrake.addEventListener('pointerdown', pressBrake);
+      pedalBrake.addEventListener('pointerup', releaseBrake);
+      pedalBrake.addEventListener('pointerleave', releaseBrake);
+      pedalBrake.addEventListener('pointercancel', releaseBrake);
     }
   }
 
@@ -660,6 +702,13 @@ class F1SimApp {
       simWrapper.classList.add('view-split-left');
       pitwallWrapper.classList.add('view-split-right');
     }
+
+    const btnLayoutDriver = document.getElementById('btn-view-driver');
+    const btnLayoutSplit = document.getElementById('btn-view-split');
+    const btnLayoutEngineer = document.getElementById('btn-view-engineer');
+    if (btnLayoutDriver) btnLayoutDriver.classList.toggle('active', layout === 'DRIVER_ONLY');
+    if (btnLayoutSplit) btnLayoutSplit.classList.toggle('active', layout === 'SPLIT');
+    if (btnLayoutEngineer) btnLayoutEngineer.classList.toggle('active', layout === 'ENGINEER_ONLY');
 
     this.onWindowResize();
     requestAnimationFrame(() => this.onWindowResize());

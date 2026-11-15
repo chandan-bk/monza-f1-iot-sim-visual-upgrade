@@ -120,7 +120,7 @@ class DashboardUI {
     } else if (tabId === 'network-workbench') {
       if (this.networkWorkbench) this.networkWorkbench.updateMetrics();
     } else if (tabId === 'race-history') {
-      this.renderPodiumClassification();
+      this.renderRaceHistoryView();
     }
 
     // Resize canvases after tab switch
@@ -188,7 +188,27 @@ class DashboardUI {
     const container = document.getElementById('explainable-recs-list');
     if (!container || !this.aiEngineer) return;
 
+    // Dynamically update AI Engineer reliability and heuristic confidence banner pills
+    const phys = this.getMonitoredPhysics();
+    const carCode = phys && phys.driver ? (phys.driver.code || 'LEC') : 'LEC';
+    const trustScore = this.sensorTrustMonitor ? this.sensorTrustMonitor.getCarTrustScore(carCode) : 100;
+    const dataReliability = trustScore >= 80 ? 'TRUSTED' : (trustScore >= 50 ? 'DEGRADED' : 'COMPROMISED');
+    const elRelTag = document.getElementById('ai-data-reliability-tag');
+    const elConfTag = document.getElementById('ai-avg-confidence-tag');
+
+    if (elRelTag) {
+      elRelTag.textContent = dataReliability;
+      elRelTag.className = dataReliability === 'TRUSTED' ? 'badge-trusted' : (dataReliability === 'DEGRADED' ? 'badge-degraded' : 'badge-compromised');
+    }
+
     const recs = this.aiEngineer.getActiveRecommendations();
+    if (elConfTag) {
+      const avgConf = recs.length > 0
+        ? Math.round(recs.reduce((acc, r) => acc + (r.confidence || 90), 0) / recs.length)
+        : Math.round(94 * (trustScore / 100));
+      elConfTag.textContent = `${avgConf}%`;
+    }
+
     if (recs.length === 0) {
       container.innerHTML = `
         <div class="event-empty" style="padding: 24px; text-align: center;">
@@ -486,6 +506,13 @@ class DashboardUI {
     setT('strat-snap-compound', `Pirelli ${s.currentCompound}`);
     setT('strat-snap-wear', `${s.currentWearPct.toFixed(1)}%`);
     setT('strat-snap-fuel', `${s.fuelRemainingKg.toFixed(1)} kg`);
+
+    const elSc = document.getElementById('strat-snap-sc');
+    if (elSc) {
+      const lap = (s && s.currentLap) || 1;
+      const scRisk = lap <= 3 ? '42% (Turn 1 Risk)' : (lap <= 15 ? '26% (Chicane Risk)' : '18% (Nominal)');
+      elSc.textContent = scRisk;
+    }
   }
 
   renderTradeoffMatrix() {
@@ -612,6 +639,100 @@ class DashboardUI {
     });
 
     container.innerHTML = html;
+
+    // Render active anomalies & discrepancies list
+    this.renderSensorAnomalyList(carCode);
+  }
+
+  renderSensorAnomalyList(carCode) {
+    const listEl = document.getElementById('sensor-anomaly-list');
+    if (!listEl) return;
+
+    const phys = this.getMonitoredPhysics();
+    const anomalies = (this.sensorTrustMonitor && this.sensorTrustMonitor.carAnomalies)
+      ? (this.sensorTrustMonitor.carAnomalies.get(carCode) || [])
+      : [];
+
+    // Also check physical faults on monitored vehicle
+    const faultItems = [...anomalies];
+    if (phys && phys.faults) {
+      if (phys.faults.engineOverheat && !faultItems.some(f => f.category === 'VEHICLE_FAULT' && f.name && f.name.includes('Coolant'))) {
+        faultItems.push({
+          sensorId: 'ENG-T01',
+          name: 'ICE Coolant RTD',
+          category: 'VEHICLE_FAULT',
+          severity: 'CRITICAL',
+          desc: 'Mechanical thermal saturation: Coolant temperature exceeds critical cylinder head threshold.',
+          penalty: 25
+        });
+      }
+      if (phys.faults.tyreLeak && !faultItems.some(f => f.category === 'VEHICLE_FAULT' && f.name && f.name.includes('TPMS'))) {
+        faultItems.push({
+          sensorId: 'TPMS-01',
+          name: 'Front-Left Wheel TPMS',
+          category: 'VEHICLE_FAULT',
+          severity: 'CRITICAL',
+          desc: 'Mechanical puncture: Active micro-leak detected on Front-Left Pirelli tyre.',
+          penalty: 20
+        });
+      }
+      if (phys.faults.brakeOverheat && !faultItems.some(f => f.category === 'VEHICLE_FAULT' && f.name && f.name.includes('Rotor'))) {
+        faultItems.push({
+          sensorId: 'BRK-T01',
+          name: 'Carbon-Carbon Rotor IR',
+          category: 'VEHICLE_FAULT',
+          severity: 'WARNING',
+          desc: 'Brake thermal fade: Rotor temperature exceeds 950°C glazing threshold.',
+          penalty: 15
+        });
+      }
+    }
+
+    if (faultItems.length === 0) {
+      listEl.innerHTML = `
+        <div class="event-empty" style="padding: 18px; text-align: center;">
+          <span style="color: #00e676; font-size: 15px; font-weight: bold; display: block; margin-bottom: 4px;">✓ ALL 19 SENSOR CHANNELS NOMINAL</span>
+          <p style="color: #64748b; font-size: 11px; margin: 0;">No active sensor disconnections, frozen ADCs, abnormal noise, or cross-channel contradictions detected.</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = '';
+    faultItems.forEach(item => {
+      let domainClass = 'domain-sens';
+      let domainLabel = '🟠 SENSOR FAULT';
+      if (item.category === 'VEHICLE_FAULT') {
+        domainClass = 'domain-veh';
+        domainLabel = '🔴 VEHICLE FAULT';
+      } else if (item.category === 'NETWORK_FAULT') {
+        domainClass = 'domain-net';
+        domainLabel = '🔵 NETWORK FAULT';
+      }
+
+      const sevClass = item.severity === 'CRITICAL' ? 'rec-critical' : 'rec-warning';
+      const sevBadge = item.severity === 'CRITICAL' ? 'sev-critical' : 'sev-warning';
+
+      html += `
+        <div class="explainable-rec-card ${sevClass}" style="margin-bottom: 8px; padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="badge-fault-domain ${domainClass}">${domainLabel}</span>
+              <strong style="color: #00e5ff; font-family: monospace;">[${item.sensorId || 'CH'}]</strong>
+              <strong style="color: #fff; font-size: 12px;">${item.name || 'Sensor Channel'}</strong>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="rec-badge-sev ${sevBadge}">${item.severity || 'WARNING'}</span>
+              <span style="font-size: 10px; color: #ff5252; font-weight: bold;">-${item.penalty || 10}% TRUST</span>
+            </div>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1; line-height: 1.4;">
+            ${item.desc || 'Telemetry anomaly detected by Bayesian trust filter.'}
+          </div>
+        </div>
+      `;
+    });
+    listEl.innerHTML = html;
   }
 
   /* --------------------------------------------------------------------------
@@ -788,6 +909,156 @@ class DashboardUI {
     if (btnJson) {
       btnJson.onclick = () => this.exportDirectJSON();
     }
+
+    this.updateExportLapSelectors();
+  }
+
+  renderRaceHistoryView() {
+    this.renderPodiumClassification();
+    this.updateExportLapSelectors();
+    this.renderExportComparisonChart();
+  }
+
+  updateExportLapSelectors() {
+    const selA = document.getElementById('export-compare-lap-a');
+    const selB = document.getElementById('export-compare-lap-b');
+    if (!selA || !selB) return;
+
+    const lapNumbers = (this.engine && this.engine.lapArchives) ? Object.keys(this.engine.lapArchives).map(Number).sort((a, b) => a - b) : [];
+
+    if (lapNumbers.length === 0) {
+      selA.innerHTML = '<option value="current">Current Lap (Live)</option>';
+      selB.innerHTML = '<option value="ref">Reference Lap (1:21.046)</option>';
+      selA.onchange = () => this.renderExportComparisonChart();
+      selB.onchange = () => this.renderExportComparisonChart();
+      this.renderExportComparisonChart();
+      return;
+    }
+
+    let optionsA = '';
+    let optionsB = '';
+    lapNumbers.forEach(l => {
+      optionsA += `<option value="${l}">Lap ${l}</option>`;
+      optionsB += `<option value="${l}">Lap ${l}</option>`;
+    });
+    optionsB += `<option value="ref">Reference Lap (1:21.046)</option>`;
+
+    selA.innerHTML = optionsA;
+    selB.innerHTML = optionsB;
+
+    if (!selA.value) selA.value = lapNumbers[0];
+    if (!selB.value) selB.value = lapNumbers.length > 1 ? lapNumbers[1] : 'ref';
+
+    selA.onchange = () => this.renderExportComparisonChart();
+    selB.onchange = () => this.renderExportComparisonChart();
+    this.renderExportComparisonChart();
+  }
+
+  renderExportComparisonChart() {
+    const canvas = this.exportCompareCanvas || document.getElementById('export-compare-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#07090e';
+    ctx.fillRect(0, 0, w, h);
+
+    const selA = document.getElementById('export-compare-lap-a');
+    const selB = document.getElementById('export-compare-lap-b');
+    const valA = selA ? selA.value : 'current';
+    const valB = selB ? selB.value : 'ref';
+
+    let lapA = (this.engine && this.engine.lapArchives && this.engine.lapArchives[valA]) || [];
+    let lapB = (this.engine && this.engine.lapArchives && this.engine.lapArchives[valB]) || [];
+
+    if (valA === 'current' || lapA.length === 0) {
+      lapA = (this.engine && this.engine.currentLapSamples) || (this.engine && this.engine.rollingBuffer) || [];
+    }
+
+    // Distance grid lines (every 1000m along Monza)
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    for (let d = 1000; d <= 5000; d += 1000) {
+      const x = (d / 5793) * w;
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x, h);
+      ctx.stroke();
+
+      ctx.fillStyle = '#475569';
+      ctx.font = '9px monospace';
+      ctx.fillText(`${d}m`, x + 3, h - 8);
+    }
+
+    // Speed Grid lines (0, 100, 200, 300, 360 km/h)
+    [100, 200, 300].forEach(spd => {
+      const y = h - (spd / 360) * h;
+      ctx.beginPath();
+      ctx.moveTo(0, y); ctx.lineTo(w, y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#475569';
+      ctx.font = '9px monospace';
+      ctx.fillText(`${spd} km/h`, 6, y - 3);
+    });
+
+    // Lap A Speed Trace (Cyan)
+    if (lapA && lapA.length > 1) {
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      lapA.forEach((s, idx) => {
+        const dist = s.track_distance_m !== undefined ? s.track_distance_m : (s.track_distance || (idx / (lapA.length - 1)) * 5793);
+        const x = (dist / 5793) * w;
+        const spd = s.speed_kmh !== undefined ? s.speed_kmh : (s.speed || 0);
+        const y = h - (Math.min(360, spd) / 360) * h;
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    // Lap B Speed Trace (Amber)
+    if (valB === 'ref' || lapB.length === 0) {
+      ctx.strokeStyle = '#ffd600';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      const refPoints = [
+        { d: 0, s: 350 }, { d: 900, s: 355 }, { d: 1120, s: 76 }, { d: 1300, s: 155 },
+        { d: 1800, s: 305 }, { d: 2400, s: 335 }, { d: 2580, s: 115 }, { d: 2750, s: 180 },
+        { d: 3080, s: 186 }, { d: 3450, s: 165 }, { d: 4050, s: 340 }, { d: 4680, s: 218 },
+        { d: 4900, s: 280 }, { d: 5300, s: 340 }, { d: 5540, s: 198 }, { d: 5793, s: 320 }
+      ];
+      refPoints.forEach((pt, idx) => {
+        const x = (pt.d / 5793) * w;
+        const y = h - (pt.s / 360) * h;
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (lapB && lapB.length > 1) {
+      ctx.strokeStyle = '#ffd600';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      lapB.forEach((s, idx) => {
+        const dist = s.track_distance_m !== undefined ? s.track_distance_m : (s.track_distance || (idx / (lapB.length - 1)) * 5793);
+        const x = (dist / 5793) * w;
+        const spd = s.speed_kmh !== undefined ? s.speed_kmh : (s.speed || 0);
+        const y = h - (Math.min(360, spd) / 360) * h;
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    // Chart Legend
+    ctx.font = 'bold 10px monospace';
+    ctx.fillStyle = '#00e5ff';
+    ctx.textAlign = 'left';
+    ctx.fillText(`— Lap A (${valA === 'current' ? 'Live' : 'Lap ' + valA})`, w - 240, 18);
+    ctx.fillStyle = '#ffd600';
+    ctx.fillText(`— Lap B (${valB === 'ref' ? 'Reference' : 'Lap ' + valB})`, w - 110, 18);
   }
 
   renderPodiumClassification() {
@@ -1109,6 +1380,13 @@ class DashboardUI {
     setTxt('metric-fuel', `${packet.fuel_remaining_kg} kg`);
     setTxt('metric-ers', `${packet.ers_soc_pct}%`);
     setTxt('metric-drs', packet.drs_status);
+
+    const elDelta = document.getElementById('metric-delta');
+    if (elDelta) {
+      const d = packet.delta_s !== undefined ? packet.delta_s : (packet.delta !== undefined ? packet.delta : 0);
+      elDelta.textContent = `${d > 0 ? '+' : ''}${d.toFixed(3)}s`;
+      elDelta.className = `metric-val ${d <= 0 ? 'delta-green' : 'delta-red'}`;
+    }
 
     const elEngTemp = document.getElementById('metric-engine-temp');
     if (elEngTemp) {
