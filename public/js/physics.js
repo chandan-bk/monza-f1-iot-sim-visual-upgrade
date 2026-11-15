@@ -535,13 +535,16 @@
         this.sector2Time = this.currentLapTime - this.sector1Time;
       }
 
-      if (curDist < 80 && this.trackProgress.distance > 5600 && this.crossedFinishCooldown <= 0) {
-        this.sector3Time = this.currentLapTime - this.sector1Time - this.sector2Time;
+      if (this.trackProgress.distance > 5000 && curDist < 800 && this.crossedFinishCooldown <= 0) {
+        this.sector3Time = Math.max(10.0, this.currentLapTime - this.sector1Time - this.sector2Time);
         this.lastLapTime = this.currentLapTime;
 
         if (this.bestLapTime === 0 || this.lastLapTime < this.bestLapTime) {
           this.bestLapTime = this.lastLapTime;
         }
+
+        const avgSpeed = this.lastLapTime > 0 ? parseFloat(((5793 / this.lastLapTime) * 3.6).toFixed(1)) : 240.0;
+        const avgWear = parseFloat(((this.tires.fl.wear + this.tires.fr.wear + this.tires.rl.wear + this.tires.rr.wear) / 4).toFixed(1));
 
         this.completedLaps.push({
           lap: this.lapCount,
@@ -549,11 +552,16 @@
           s1: this.sector1Time,
           s2: this.sector2Time,
           s3: this.sector3Time,
+          avgSpeedKmh: avgSpeed,
+          tireWear: avgWear,
           invalidated: this.lapInvalidated
         });
 
         this.lapCount++;
         this.currentLapTime = 0;
+        this.sector1Time = 0;
+        this.sector2Time = 0;
+        this.sector3Time = 0;
         this.lapInvalidated = false;
         this.crossedFinishCooldown = 15.0;
       }

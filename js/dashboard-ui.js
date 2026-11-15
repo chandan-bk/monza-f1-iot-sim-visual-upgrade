@@ -1153,20 +1153,40 @@ class DashboardUI {
     const btnDrs = document.getElementById('btn-scen-drs');
 
     if (btnBrake) btnBrake.onclick = () => {
-      this.engine.injectBrakeOverheat();
-      this.showUrgentToast(this.engine.currentUrgentAlert);
+      try {
+        const alert = this.engine && this.engine.injectBrakeOverheat ? this.engine.injectBrakeOverheat() : null;
+        this.showUrgentToast(alert || (this.engine && this.engine.currentUrgentAlert));
+        this.updateEventLog();
+      } catch (err) {
+        console.warn('Brake scenario error:', err);
+      }
     };
     if (btnPuncture) btnPuncture.onclick = () => {
-      this.engine.injectSlowPuncture();
-      this.showUrgentToast(this.engine.currentUrgentAlert);
+      try {
+        const alert = this.engine && this.engine.injectSlowPuncture ? this.engine.injectSlowPuncture() : null;
+        this.showUrgentToast(alert || (this.engine && this.engine.currentUrgentAlert));
+        this.updateEventLog();
+      } catch (err) {
+        console.warn('Puncture scenario error:', err);
+      }
     };
     if (btnStrategy) btnStrategy.onclick = () => {
-      this.engine.triggerUndercutStrategy();
-      this.showUrgentToast(this.engine.currentUrgentAlert);
+      try {
+        const alert = this.engine && this.engine.triggerUndercutStrategy ? this.engine.triggerUndercutStrategy() : null;
+        this.showUrgentToast(alert || (this.engine && this.engine.currentUrgentAlert));
+        this.updateEventLog();
+      } catch (err) {
+        console.warn('Strategy scenario error:', err);
+      }
     };
     if (btnDrs) btnDrs.onclick = () => {
-      this.engine.triggerDrsAuthorization();
-      this.showUrgentToast(this.engine.currentUrgentAlert);
+      try {
+        const alert = this.engine && this.engine.triggerDrsAuthorization ? this.engine.triggerDrsAuthorization() : null;
+        this.showUrgentToast(alert || (this.engine && this.engine.currentUrgentAlert));
+        this.updateEventLog();
+      } catch (err) {
+        console.warn('DRS scenario error:', err);
+      }
     };
 
     const btnDismiss = document.getElementById('toast-dismiss');
@@ -1196,6 +1216,8 @@ class DashboardUI {
 
     if (window.f1Audio && window.f1Audio.playPitRadioAlert) {
       window.f1Audio.playPitRadioAlert();
+    } else if (window.f1App && window.f1App.audio && window.f1App.audio.playPitRadioAlert) {
+      window.f1App.audio.playPitRadioAlert();
     }
 
     if (this._toastTimer) clearTimeout(this._toastTimer);
@@ -1488,6 +1510,9 @@ class DashboardUI {
       const bestLap = c.p.bestLapTime > 0 ? `${c.p.bestLapTime.toFixed(3)}s` : '--.---';
       const gap = posIdx === 0 ? 'LEADER' : `+${((all[0].totalDist - c.totalDist) / 80).toFixed(1)}s`;
 
+      const s1Str = c.p.sector1Time > 0 ? `${c.p.sector1Time.toFixed(1)}s` : (c.p.trackProgress && c.p.trackProgress.sector === 1 ? '<span style="color:#00e5ff; font-weight:600;">S1...</span>' : '--.-s');
+      const s2Str = c.p.sector2Time > 0 ? `${c.p.sector2Time.toFixed(1)}s` : (c.p.trackProgress && c.p.trackProgress.sector === 2 ? '<span style="color:#ffd600; font-weight:600;">S2...</span>' : (c.p.trackProgress && c.p.trackProgress.sector === 3 ? '<span style="color:#00e676; font-weight:600;">S3...</span>' : '--.-s'));
+
       html += `
         <tr data-car-idx="${c.idx}" class="${isMonitored ? 'row-monitored' : ''}">
           <td><span class="pos-badge pos-${pos}">P${pos}</span></td>
@@ -1496,7 +1521,7 @@ class DashboardUI {
           <td>${gap}</td>
           <td>${lastLap}</td>
           <td class="col-best">${bestLap}</td>
-          <td>S1 / S2</td>
+          <td>${s1Str} / ${s2Str}</td>
         </tr>
       `;
     });

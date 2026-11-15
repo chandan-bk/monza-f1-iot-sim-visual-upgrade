@@ -474,6 +474,91 @@
         window.f1Audio.playPitRadioAlert();
       }
     }
+
+    injectBrakeOverheat(carIndex = 0) {
+      if (typeof window !== 'undefined' && window.f1App) {
+        const monPhys = window.f1App.getMonitoredPhysics ? window.f1App.getMonitoredPhysics() : window.f1App.playerPhysics;
+        if (monPhys && monPhys.injectPhysicalFault) {
+          monPhys.injectPhysicalFault('BRAKE_OVERHEAT');
+          if (monPhys.brakes && monPhys.brakes.fl) {
+            monPhys.brakes.fl.temp = 948.0;
+            monPhys.brakes.fr.temp = 922.0;
+          }
+        }
+      }
+      this.logEvent("CRITICAL", "BRAKES", "BRAKE THERMAL RUNAWAY: FL rotor reached 948°C. Fluid vaporization hazard.");
+      this.currentUrgentAlert = {
+        type: 'CRITICAL',
+        icon: '🚨',
+        title: 'CRITICAL: BRAKE THERMAL RUNAWAY',
+        desc: 'Front-Left carbon rotor at 948°C (+180°C over ceiling). High risk of brake fade into Turn 1 chicane.',
+        action: 'MIGRATE BIAS +3.5% REAR • EXTEND LIFT-AND-COAST 80M',
+        timestamp: Date.now()
+      };
+      return this.currentUrgentAlert;
+    }
+
+    injectSlowPuncture(carIndex = 0) {
+      if (typeof window !== 'undefined' && window.f1App) {
+        const monPhys = window.f1App.getMonitoredPhysics ? window.f1App.getMonitoredPhysics() : window.f1App.playerPhysics;
+        if (monPhys && monPhys.injectPhysicalFault) {
+          monPhys.injectPhysicalFault('TYRE_PRESSURE_LEAK', { wheel: 'fl' });
+          if (monPhys.tires && monPhys.tires.fl) {
+            monPhys.tires.fl.pressure_psi = 14.6;
+          }
+        }
+      }
+      this.logEvent("WARNING", "TYRES", "TPMS WARNING: FL pressure decay rate exceeds nominal (-0.42 bar/min). Rim micro-leak detected.");
+      this.currentUrgentAlert = {
+        type: 'WARNING',
+        icon: '⚠️',
+        title: 'TPMS ALERT: SLOW PUNCTURE (FL)',
+        desc: 'Front Left tire pressure decayed to 14.6 psi (-34% nominal). High lateral slip degradation detected.',
+        action: 'CONFIRM IN-LAP • PREPARE SOFT COMPOUND IN BOX',
+        timestamp: Date.now()
+      };
+      return this.currentUrgentAlert;
+    }
+
+    triggerUndercutStrategy(carIndex = 0) {
+      if (typeof window !== 'undefined' && window.f1App) {
+        const monPhys = window.f1App.getMonitoredPhysics ? window.f1App.getMonitoredPhysics() : window.f1App.playerPhysics;
+        if (monPhys && monPhys.tires) {
+          monPhys.tires.fl.wear = Math.min(85.0, (monPhys.tires.fl.wear || 30.0) + 22.0);
+          monPhys.tires.fr.wear = Math.min(85.0, (monPhys.tires.fr.wear || 30.0) + 22.0);
+        }
+      }
+      this.logEvent("STRATEGY", "AI_ENGINEER", "STRATEGY ALERT: Rival cars entering degradation window. 21.4s pit delta creates optimal Undercut window.");
+      this.currentUrgentAlert = {
+        type: 'INFO',
+        icon: '⏱️',
+        title: 'STRATEGY: UNDERCUT WINDOW OPEN',
+        desc: 'Pit lane delta is 21.4s. Competitor degradation gradient is +0.38s/lap. Box this lap for fresh Hard compound.',
+        action: 'BOX BOX BOX • TARGET IN-LAP DELTA: GREEN',
+        timestamp: Date.now()
+      };
+      return this.currentUrgentAlert;
+    }
+
+    triggerDrsAuthorization(carIndex = 0) {
+      if (typeof window !== 'undefined' && window.f1App) {
+        const monPhys = window.f1App.getMonitoredPhysics ? window.f1App.getMonitoredPhysics() : window.f1App.playerPhysics;
+        if (monPhys) {
+          monPhys.drsAvailable = true;
+          monPhys.drsActive = true;
+        }
+      }
+      this.logEvent("INFO", "TELEMETRY", "DRS DEPLOYED: Rear wing flap actuator deployed down Rettifilo straight. -24 drag count active.");
+      this.currentUrgentAlert = {
+        type: 'SUCCESS',
+        icon: '⚡',
+        title: 'DRS SYSTEM AUTHORIZED & DEPLOYED',
+        desc: 'Gap to leading vehicle is < 1.000s at Detection Zone 1. Flap open, top speed gain +18 km/h.',
+        action: 'DEPLOY OVERTAKE ENGINE MODE 1 • MONITOR BRAKING POINT',
+        timestamp: Date.now()
+      };
+      return this.currentUrgentAlert;
+    }
   }
 
   return TelemetryEngine;

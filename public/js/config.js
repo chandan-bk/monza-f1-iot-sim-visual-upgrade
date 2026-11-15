@@ -127,7 +127,7 @@ window.F1_CONFIG = {
       number: 1,
       team: 'Oracle Red Bull Racing',
       country: 'NED',
-      color: '#0c192c',          // Matte Navy Blue
+      color: '#3671c6',          // Red Bull Electric Racing Blue
       accentColor: '#f30018',    // Red Bull Red
       haloColor: '#f30018',
       gloveColor: '#0c192c',

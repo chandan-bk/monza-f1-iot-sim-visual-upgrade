@@ -558,6 +558,7 @@ class F1SimApp {
     const btnTimeTrial = document.getElementById('btn-start-time-trial');
     const btnExportCsv = document.getElementById('btn-export-csv');
     const btnReturnMenu = document.getElementById('btn-return-menu');
+    const btnRestartRace = document.getElementById('btn-restart-race');
     const btnLayoutDriver = document.getElementById('btn-view-driver');
     const btnLayoutSplit = document.getElementById('btn-view-split');
     const btnLayoutEngineer = document.getElementById('btn-view-engineer');
@@ -569,6 +570,7 @@ class F1SimApp {
     if (btnTimeTrial) btnTimeTrial.onclick = () => this.startRace('TIME_TRIAL');
     if (btnExportCsv) btnExportCsv.onclick = () => this.postRace.exportCSV();
     if (btnReturnMenu) btnReturnMenu.onclick = () => this.showScreen('screen-menu');
+    if (btnRestartRace) btnRestartRace.onclick = () => this.startRace(this.session.mode || 'AUTONOMOUS_RACE');
     if (btnQuickCam) btnQuickCam.onclick = () => this.toggleCamera();
 
     if (btnLayoutDriver) btnLayoutDriver.onclick = () => this.setViewLayout('DRIVER_ONLY');
@@ -867,7 +869,22 @@ class F1SimApp {
 
     if (this.playerPhysics.lapCount > prevLap) {
       this.telemetry.onLapComplete(prevLap);
+    }
+
+    // Check race completion condition (Player or any car completing all laps)
+    if (this.session.state === 'RUNNING') {
+      let isRaceComplete = false;
       if (this.playerPhysics.lapCount > this.session.totalLaps) {
+        isRaceComplete = true;
+      } else if (this.aiCars && this.aiCars.length > 0) {
+        for (let i = 0; i < this.aiCars.length; i++) {
+          if (this.aiCars[i].physics && this.aiCars[i].physics.lapCount > this.session.totalLaps) {
+            isRaceComplete = true;
+            break;
+          }
+        }
+      }
+      if (isRaceComplete) {
         this.finishRace();
         return;
       }
@@ -1228,7 +1245,13 @@ class F1SimApp {
   finishRace() {
     this.session.state = 'FINISHED';
     if (this.audio) this.audio.playPitRadioAlert();
-    this.postRace.populateResults(this.playerPhysics, this.aiCars, this.session.mode);
+    try {
+      if (this.postRace && this.postRace.populateResults) {
+        this.postRace.populateResults(this.playerPhysics, this.aiCars, this.session.mode);
+      }
+    } catch (err) {
+      console.warn('[F1SimApp] postRace populate error:', err);
+    }
     this.showScreen('screen-results');
   }
 }
