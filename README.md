@@ -101,21 +101,29 @@ npm start
 # Gateway Server Health:    http://localhost:3000/api/status
 ```
 
-### Security & Authentication Configuration (Optional)
-By default, the server runs in permissive mode suitable for local educational demonstration and testing. For hardened multi-device deployments, set environment variables:
+### Security & Authentication Architecture
+The simulation implements a defense-in-depth model with an explicit distinction between local educational execution and authenticated network deployments:
+
+1. **Zero-Secret Client Bundles**: Frontend JavaScript modules (`js/iot-bridge.js`) contain no hardcoded secrets or server credentials. No sensitive secrets are baked into publicly served static assets.
+2. **Local Educational Demonstration Mode (Default)**: By default (`F1_REQUIRE_AUTH=false`), the system runs with permissive authentication suitable for local evaluation without friction. Role boundaries are strictly enforced: only SIM clients can publish telemetry; only DASHBOARD clients can issue interventions; repeated registrations and role escalations are rejected.
+3. **Strict Authenticated Mode (Enforced via Environment Variables)**: For multi-device or cloud deployments, strict token validation is engaged:
 ```bash
 # Enable strict authentication enforcement
 export F1_REQUIRE_AUTH=true
 
-# Custom pre-shared credentials (defaults provided for testing)
-export F1_SIM_TOKEN="f1-sim-auth-token-2024"
-export F1_DASH_TOKEN="f1-dash-auth-token-2024"
-export F1_API_KEY="f1-rest-api-token-2024"
+# Distinct pre-shared secrets for external producers, monitors, and REST API
+export F1_SIM_TOKEN="f1-sim-secret-token-v1"
+export F1_DASH_TOKEN="f1-dash-secret-token-v1"
+export F1_API_KEY="f1-rest-api-key-v1"
 ```
+4. **WebSocket & REST Telemetry Validation**: Ingested packets are validated for vehicle identity (`VALID_CAR_IDS`), mandatory numeric bounds (Speed: 0–450 km/h, RPM: 0–22,000, Temp: -20°C to 250°C), and batch size (1 to 6 cars). Corrupted vehicles are isolated so that healthy streams continue without interruption.
+5. **Targeted Simulator Execution**: Remote commands are routed to the specific target simulator (or primary active simulator) rather than broadcast indiscriminately, preventing duplicate execution.
+6. **Separation of Command Acks**: The server immediately returns `COMMAND_DISPATCHED` when a command is relayed, and only emits `COMMAND_ACK` when the simulator completes actual physical execution.
+7. **Rate Limiting & Message Caps**: WebSocket frames are capped at 64 KB and rate-limited to 60 msgs/sec per socket; REST endpoints are limited to 240 requests/min per IP.
 
 ### Running Automated Test Suites
 ```bash
-# 1. Standard Integrated Test Suite (Syntax + 18 Server Checks + 200 Sim Steps)
+# 1. Standard Integrated Test Suite (Syntax + Server Verification + 200 Sim Steps)
 npm test
 
 # 2. 120-Second Multi-Car Competitive Race Flow Verification (Overtakes & Gaps)
@@ -124,8 +132,11 @@ npm run test:race
 # 3. Autonomous Multi-Car & Telemetry QA Acceptance Suite (5 Acceptance Criteria)
 npm run test:qa
 
-# 4. Real Browser (Google Chrome) Headless E2E Verification via CDP
+# 4. Real Browser (Google Chrome) Headless E2E Verification via CDP (Cross-Platform)
 npm run test:browser
+
+# 5. Visual Regression Test Suite (Real Browser WebGL Render Checks)
+npm run test:visual
 ```
 
 ---

@@ -33,8 +33,7 @@
 
       this.role = options.role || defaultRole;
       this.clientId = options.clientId || `${this.role}_${Math.random().toString(36).substr(2, 6)}`;
-      const defaultToken = (this.role === 'SIM') ? 'f1-sim-auth-token-2024' : 'f1-dash-auth-token-2024';
-      this.token = options.token || (typeof window !== 'undefined' && window.F1_CONFIG && window.F1_CONFIG.AUTH_TOKEN) || defaultToken;
+      this.token = options.token || (typeof window !== 'undefined' && window.F1_CONFIG && window.F1_CONFIG.AUTH_TOKEN) || null;
       this.sessionId = null;
       this.isRegistered = false;
 
@@ -92,13 +91,16 @@
         this.ws.onopen = () => {
           this.isConnected = true;
           // Send registration handshake
-          this.ws.send(JSON.stringify({
+          const regMsg = {
             type: 'REGISTER',
             role: this.role,
             clientId: this.clientId,
-            token: this.token,
             timestamp: Date.now()
-          }));
+          };
+          if (this.token) {
+            regMsg.token = this.token;
+          }
+          this.ws.send(JSON.stringify(regMsg));
 
           // Start periodic PING loop for real measured RTT
           this.startPingLoop();
@@ -112,6 +114,14 @@
             if (msg.type === 'REGISTER_ACK') {
               this.sessionId = msg.session_id;
               this.isRegistered = true;
+              return;
+            }
+
+            if (msg.type === 'REGISTER_REJECTED') {
+              this.isRegistered = false;
+              if (this.onRegistrationRejected) {
+                this.onRegistrationRejected(msg);
+              }
               return;
             }
 
@@ -154,6 +164,14 @@
                 const result = this.onCommandHandler(msg.action, msg.payload, msg.command_id);
                 // Return real execution acknowledgement
                 this.sendCommandAck(msg.command_id, result);
+              }
+              return;
+            }
+
+            if (msg.type === 'COMMAND_DISPATCHED') {
+              const pending = this.pendingCommands.get(msg.command_id);
+              if (pending && typeof pending.onDispatched === 'function') {
+                pending.onDispatched(msg);
               }
               return;
             }

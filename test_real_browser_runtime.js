@@ -1,10 +1,66 @@
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const http = require('http');
+const fs = require('fs');
 const assert = require('assert');
 const WebSocket = require('ws');
 const { createServerInstance } = require('./server');
 
-const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+function findChromePath() {
+  if (process.env.CHROME_BIN && fs.existsSync(process.env.CHROME_BIN)) {
+    return process.env.CHROME_BIN;
+  }
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  if (process.platform === 'win32') {
+    const localApp = process.env.LOCALAPPDATA || '';
+    const progFiles = process.env['PROGRAMFILES'] || 'C:\\Program Files';
+    const progFilesX86 = process.env['PROGRAMFILES(X86)'] || 'C:\\Program Files (x86)';
+    const candidates = [
+      `${progFiles}\\Google\\Chrome\\Application\\chrome.exe`,
+      `${progFilesX86}\\Google\\Chrome\\Application\\chrome.exe`,
+      `${localApp}\\Google\\Chrome\\Application\\chrome.exe`,
+      `${progFiles}\\Microsoft\\Edge\\Application\\msedge.exe`,
+      `${progFilesX86}\\Microsoft\\Edge\\Application\\msedge.exe`,
+      `${localApp}\\Microsoft\\Edge\\Application\\msedge.exe`
+    ];
+    for (const c of candidates) {
+      if (c && fs.existsSync(c)) return c;
+    }
+    try {
+      const out = execSync('where chrome.exe', { encoding: 'utf-8' }).trim().split('\r\n')[0];
+      if (out && fs.existsSync(out)) return out;
+    } catch (e) {}
+  } else if (process.platform === 'linux') {
+    const candidates = [
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/chromium',
+      '/usr/bin/chromium-browser',
+      '/snap/bin/chromium'
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    try {
+      const out = execSync('which google-chrome || which chromium || which chromium-browser', { encoding: 'utf-8' }).trim().split('\n')[0];
+      if (out && fs.existsSync(out)) return out;
+    } catch (e) {}
+  } else if (process.platform === 'darwin') {
+    const candidates = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium'
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+  }
+
+  throw new Error('Chromium/Chrome executable not found. Set CHROME_BIN environment variable or install Google Chrome/Chromium.');
+}
+
+const CHROME_PATH = findChromePath();
 const PORT = 3000;
 const CDP_PORT = 9222;
 

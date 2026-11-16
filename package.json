@@ -9,7 +9,8 @@
     "test": "node test-syntax.js && node test-server.js && node test_monza_simulation.js",
     "test:race": "node test_race_flow.js",
     "test:qa": "node test_runtime_qa_validation.js",
-    "test:browser": "node test_real_browser_runtime.js"
+    "test:browser": "node test_real_browser_runtime.js",
+    "test:visual": "node test_visual_regression.js"
   },
   "keywords": [
     "motorsport",

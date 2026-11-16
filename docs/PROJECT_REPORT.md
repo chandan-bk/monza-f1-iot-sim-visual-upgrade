@@ -72,21 +72,23 @@ Rather than relying on black-box heuristics, the telemetry engine evaluates tran
 
 ---
 
-## 5. Build 7 & Phase 2 Backend Hardening Verification
+## 5. Build 7 & Final Hardening Verification
 
-In Build 7 and Phase 2, the platform underwent comprehensive integration testing across the vehicle dynamics core, telemetry pipeline, and WebSocket gateway:
+In Build 7 and the final stabilization phase, the platform underwent comprehensive integration testing and security verification:
 1. **6-Car Independent Physics & AI Dynamics**: Verified non-convergent, distinct speeds (LEC: 347.4, VER: 347.8, HAM: 347.6, NOR: 348.7, ALO: 346.4, GAS: 345.4 km/h) and independent grid slots (P1: 140m, P6: 50m).
 2. **Concurrent 6-Stream Batch Transmission**: 20 Hz batches serialize all 6 vehicles concurrently without restricting background streaming when the dashboard user switches monitored focus.
-3. **Single-Car Failure Isolation**: Wrapped serialization ensures that a failure or anomaly in one car's sensor registry does not interrupt the transmission of the other 5 vehicles.
-4. **Dual-Role WebSocket Security**: Only authenticated SIM clients are authorized to ingest telemetry; non-SIM clients attempting to publish are rejected with `UNAUTHORIZED_PUBLISHER`.
-5. **Closed-Loop Remote Interventions & Faults**: Race engineer commands (`COOLING_MODE`, `PIT_STOP`, `TYRE_PRESSURE_LEAK`, etc.) are routed to the specific target vehicle, executed on real physics, and acknowledged with exact post-execution state.
-6. **Sequence Gap Detection & Reconnections**:
-### 5.1 Security Hardening & Input Validation
-1. **Cryptographic Tokens**: Session identifiers are generated using 16-character hex strings derived from cryptographic entropy (`crypto.randomBytes(8)`).
-2. **Whitelist-Enforced Command Interventions**: Incoming commands are validated against `ALLOWED_ACTIONS` and `VALID_CAR_IDS`. Malformed actions or illegal parameters are rejected with `COMMAND_REJECTED`.
-3. **Payload Sanitization**: Telemetry ingest validates numeric boundaries (Speed 0–450 km/h, RPM 0–22,000, Coolant -20°C to 250°C), returning HTTP 400 for malformed or out-of-range data.
-4. **Heartbeat Watchdog**: Dead client connections are automatically pruned every 30 seconds to maintain zero memory leak profile.
- The server continuously monitors sequence continuity per vehicle stream and tracks client reconnection counts.
+3. **Single-Car Failure Isolation**: Wrapped serialization and batch filtering ensure that a failure, malformed payload, or anomaly in one car does not interrupt the transmission of the other 5 vehicles.
+4. **Dual-Role WebSocket Security**: Only authorized SIM clients may ingest telemetry; non-SIM clients attempting to publish are rejected with `UNAUTHORIZED_PUBLISHER`.
+5. **Closed-Loop Remote Interventions & Targeted Execution**: Race engineer commands (`COOLING_MODE`, `PIT_STOP`, `TYRE_PRESSURE_LEAK`, etc.) are routed to the single targeted simulator rather than broadcast indiscriminately, eliminating duplicate execution.
+6. **Command Lifecycle Separation**: The server dispatches `COMMAND_DISPATCHED` upon routing, and only relays `COMMAND_ACK` when the simulator acknowledges actual physical execution.
+
+### 5.1 Security Architecture & Input Validation
+1. **128-Bit Cryptographic Session Tokens**: Client session identifiers provide at least 128 bits of cryptographic entropy (`crypto.randomBytes(16).toString('hex')`), preventing brute-force session spoofing.
+2. **Zero Hardcoded Secrets in Frontend**: Client bundles contain no embedded secrets or credentials. The application transparently supports zero-friction local educational demonstration mode (`F1_REQUIRE_AUTH=false`), while enforcing strict distinct tokens for SIM (`F1_SIM_TOKEN`), DASHBOARD (`F1_DASH_TOKEN`), and REST (`F1_API_KEY`) when strict mode is engaged.
+3. **Repeated Registration & Role Escalation Defense**: A socket cannot re-register or escalate roles once connected (`ALREADY_REGISTERED`).
+4. **WebSocket & REST Telemetry Validation**: Ingested packets are validated for vehicle identity (`VALID_CAR_IDS`) and physical boundaries (Speed 0–450 km/h, RPM 0–22,000, Coolant -20°C to 250°C).
+5. **Network Protection & Rate Limiting**: WebSocket message sizes are capped at 64 KB (`MESSAGE_TOO_LARGE`) with per-socket rate limiting (60 msg/sec); REST endpoints are rate-limited to 240 requests/min per IP.
+6. **Cross-Platform Test Portability**: Automated browser test suites dynamically detect Chrome/Chromium executables across Windows, Linux, and macOS. A separate visual regression suite (`npm run test:visual`) validates Three.js WebGL scene consistency.
 
 ## 6. Experimental Results & Verification
 

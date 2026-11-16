@@ -393,7 +393,7 @@ class F1SimApp {
     const carCode = targetCar.driver.code || targetCar.driver.id;
 
     // Remote Engineering Interventions
-    const interventionActions = ['COOLING_MODE', 'PIT_STOP', 'BRAKE_BIAS', 'DAMPER_RECALIBRATION', 'LIFT_AND_COAST', 'RESET_INTERVENTION'];
+    const interventionActions = ['COOLING_MODE', 'PIT_STOP', 'BRAKE_BIAS', 'DAMPER_RECALIBRATION', 'DAMPER_STIFFNESS', 'LIFT_AND_COAST', 'RESET_INTERVENTION', 'RESET_INTERVENTIONS'];
     if (interventionActions.includes(act)) {
       const exec = p.applyIntervention(act, payload);
       return Object.assign({ command_id: commandId, action: act, target_car_id: carCode }, exec);

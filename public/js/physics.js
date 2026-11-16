@@ -240,6 +240,7 @@
           };
 
         case 'DAMPER_RECALIBRATION':
+        case 'DAMPER_STIFFNESS':
           this.faults.vibration = false;
           this.vibration_rms = 1.8;
           return {
@@ -258,6 +259,7 @@
             result: { liftAndCoastActive: true, coastDistance_m: 80 }
           };
 
+        case 'RESET_INTERVENTIONS':
         case 'RESET_INTERVENTION':
           this.interventions = { coolingMode: false, pitStop: false, liftAndCoast: false, brakeBiasDelta: 0 };
           this.cfg.brakeBiasFront = 0.56;
